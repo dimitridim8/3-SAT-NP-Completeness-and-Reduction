@@ -7,23 +7,25 @@
 #include <random>
 #include <chrono>
 #include <ctime>
-#include <windows.h>
-#include <stdio.h>
-#include <psapi.h>
-#include <cstring>
+//#include <windows.h>
+//#include <stdio.h>
+//#include <psapi.h>
+//#include <cstring>
 #include <sys/time.h>
 #include <sys/resource.h>
 using namespace std;
 
+//Function to Get Current Memory Usage
 long get_memory_usage(){
     struct rusage usage;
     getrusage(RUSAGE_SELF, &usage);
     return usage.ru_maxrss;
+    //return 0;
 }
 
 //Create Clarifier for 3-SAT
 
-bool C(vector<vector<int>> cnf, vector<bool> T){
+bool C(vector<vector<int>> cnf, vector<bool> T, vector<long>& usages){
     for(int i = 0; i < cnf.size(); i++){
         //return false;
         //Find Literals
@@ -44,6 +46,14 @@ bool C(vector<vector<int>> cnf, vector<bool> T){
         bool l2_true = (T[abs(l2)] && l2 > 0) || (!T[abs(l2)] && l2 < 0);
         bool l3_true = (T[abs(l3)] && l3 > 0) || (!T[abs(l3)] && l3 < 0);
 
+        //Determine Peak Memory Usage
+        long initial = usages[0];
+        long current = get_memory_usage();
+        if(current - initial > usages.back()){
+            usages.pop_back();
+            usages.push_back(current- initial);
+        }
+        
         //If Clause is not True, Return False
         if(!l1_true && !l2_true && !l3_true){
             return false;
@@ -67,7 +77,7 @@ void T_helper(vector<bool>& T, int index){
 }
 
 //Create Algorithm for 3-SAT
-vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n){
+vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long> usages){
     
     //Check if Valid Input
     if(cnf.size() <= 0 || n < 3){
@@ -85,7 +95,7 @@ vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n){
     
     while(!output && !T[0]){
         //Use Clarifier to Determine whether current T is a solution
-        if(C(cnf, T)){
+        if(C(cnf, T, usages)){
             output = true;
             //cout << "T Found" << endl;
         }
@@ -93,10 +103,13 @@ vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n){
             //Update Truth Alignment
             T_helper(T, n);
             
-            /*for(int i = 0; i < T.size(); i++){
-                cout << T[i] << " ";
+            //Determine Peak Memory Usage
+            long initial = usages[0];
+            long current = get_memory_usage();
+            if(current - initial > usages.back()){
+                usages.pop_back();
+                usages.push_back(current- initial);
             }
-            cout << endl;*/
         }
     }
     
@@ -190,7 +203,7 @@ void generate_input(string file_name, bool cert, int c, int n){
     return;
 }
 
-double run(string input_name, string output_name){
+double run(string input_name, string output_name, vector<long>& usages){
     //Read in Input File
     ifstream input_file(input_name);
     if(!input_file.is_open()){
@@ -216,11 +229,10 @@ double run(string input_name, string output_name){
             generate_worst_case(input_path + "14" + ext, 200, 11);
             generate_worst_case(input_path + "15" + ext, 300, 15);
             vector<double> times;
-            vector<long> usages;
             for(int i = 1; i <= 15; i++){
-                long initial_mem = get_memory_usage();
-                times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext));
-                usages.push_back(initial_mem - get_memory_usage());
+                usages[0] = get_memory_usage();
+                usages.push_back(0);
+                times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext, usages));
             }
             
             ofstream time_file("./test_units/CPU_TIMES.txt");
@@ -311,14 +323,14 @@ double run(string input_name, string output_name){
             }
         }
         const auto start{std::chrono::steady_clock::now()};
-        T[0] = C(cnf, T);
+        T[0] = C(cnf, T, usages);
         const auto finish{std::chrono::steady_clock::now()};
         const std::chrono::duration<double> elapsed_seconds{finish - start};
         time = elapsed_seconds.count();
     }
     else{
         const auto start{std::chrono::steady_clock::now()};
-        T = SAT_algorithm(cnf, n);
+        T = SAT_algorithm(cnf, n, usages);
         const auto finish{std::chrono::steady_clock::now()};
         const std::chrono::duration<double> elapsed_seconds{finish - start};
         time = elapsed_seconds.count();
@@ -411,6 +423,8 @@ int main(){
     }
     */
     //Default Run Using input.txt & output.txt
-    run("./input.txt", "./output.txt");
+    vector<long> temp;
+    temp.push_back(get_memory_usage());
+    run("./input.txt", "./output.txt", temp);
     return 1;
 }
