@@ -7,7 +7,19 @@
 #include <random>
 #include <chrono>
 #include <ctime>
+#include <windows.h>
+#include <stdio.h>
+#include <psapi.h>
+#include <cstring>
+#include <sys/time.h>
+#include <sys/resource.h>
 using namespace std;
+
+long get_memory_usage(){
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    return usage.ru_maxrss;
+}
 
 //Create Clarifier for 3-SAT
 
@@ -204,24 +216,23 @@ double run(string input_name, string output_name){
             generate_worst_case(input_path + "14" + ext, 200, 11);
             generate_worst_case(input_path + "15" + ext, 300, 15);
             vector<double> times;
+            vector<long> usages;
             for(int i = 1; i <= 15; i++){
+                long initial_mem = get_memory_usage();
                 times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext));
+                usages.push_back(initial_mem - get_memory_usage());
             }
-            /*
-            run("./test_units/input-files/input-1.txt", "./test_units/output-files/output-1.txt");
-            run("./test_units/input-files/input-2.txt", "./test_units/output-files/output-2.txt");
-            run("./test_units/input-files/input-3.txt", "./test_units/output-files/output-3.txt");
-            run("./test_units/input-files/input-4.txt", "./test_units/output-files/output-4.txt");
-            run("./test_units/input-files/input-5.txt", "./test_units/output-files/output-5.txt");
-            */
+            
             ofstream time_file("./test_units/CPU_TIMES.txt");
             time_file << "Certifier Tests" << endl;
             for(int i = 1; i <= 5; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
             }
             time_file << endl << "Algorithm Tests" << endl;
             for(int i = 6; i <= 15; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
             }
             time_file.close();
             cout << "Finished Running Test Cases, check ./test_units for output" << endl;
@@ -287,15 +298,14 @@ double run(string input_name, string output_name){
     double time;
     if(cert == 1){
         T.push_back(false);
-        bool l;
-        ss = stringstream(str);
         if(!getline(input_file, str)){
             cout << "Invalid input" << endl;
             return -1;
         }
+        ss = stringstream(str);
         for(int i = 1; i <= n; i++){
             if(getline(ss, s, ' ')){
-                l = stoi(s);
+                int l = stoi(s);
                 if(l == 1){T.push_back(true);}
                 else{T.push_back(false);}
             }
@@ -322,7 +332,7 @@ double run(string input_name, string output_name){
     if(cert == 1){
         output_file << "Certifier Test:" << endl;
         output_file << "n = " << n << " T = [";
-        for(int i = 1; i < min((int)(T.size()), 25); i++){
+        for(int i = 1; i < min((int)(T.size()-1), 25); i++){
             output_file << "X" << i << " = " << T[i] << ", ";
         }
         if(T.size() > 50){
@@ -355,7 +365,7 @@ double run(string input_name, string output_name){
     }
     output_file << "Solution Found!" << endl;
     output_file << "T = [";
-    for(int i = 1; i < min((int)(T.size()), 25); i++){
+    for(int i = 1; i < min((int)(T.size()-1), 25); i++){
         output_file << "X" << i << " = " << T[i] << ", ";
     }
     if(T.size() > 50){
