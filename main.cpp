@@ -25,7 +25,7 @@ long get_memory_usage(){
 
 //Create Clarifier for 3-SAT
 
-bool C(vector<vector<int>> cnf, vector<bool> T, vector<long>& usages){
+bool C(vector<vector<int>> cnf, vector<bool> T, long& usage){
     for(int i = 0; i < cnf.size(); i++){
         //return false;
         //Find Literals
@@ -48,9 +48,8 @@ bool C(vector<vector<int>> cnf, vector<bool> T, vector<long>& usages){
 
         //Determine Peak Memory Usage
         long current = get_memory_usage();
-        if(current > usages.back()){
-            usages.pop_back();
-            usages.push_back(current);
+        if(current > usage){
+            usage = current;
         }
         
         //If Clause is not True, Return False
@@ -76,7 +75,7 @@ void T_helper(vector<bool>& T, int index){
 }
 
 //Create Algorithm for 3-SAT
-vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long>& usages){
+vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, long& usage){
     
     //Check if Valid Input
     if(cnf.size() <= 0 || n < 3){
@@ -94,7 +93,7 @@ vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long>& usages)
     
     while(!output && !T[0]){
         //Use Clarifier to Determine whether current T is a solution
-        if(C(cnf, T, usages)){
+        if(C(cnf, T, usage)){
             output = true;
             //cout << "T Found" << endl;
         }
@@ -104,9 +103,8 @@ vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long>& usages)
             
             //Determine Peak Memory Usage
             long current = get_memory_usage();
-            if(current > usages.back()){
-                usages.pop_back();
-                usages.push_back(current);
+            if(current > usage){
+                usage = current;
             }
         }
     }
@@ -201,7 +199,7 @@ void generate_input(string file_name, bool cert, int c, int n){
     return;
 }
 
-double run(string input_name, string output_name, vector<long>& usages){
+double run(string input_name, string output_name, long& usage){
     //Read in Input File
     ifstream input_file(input_name);
     if(!input_file.is_open()){
@@ -227,21 +225,23 @@ double run(string input_name, string output_name, vector<long>& usages){
             generate_worst_case(input_path + "14" + ext, 200, 11);
             generate_worst_case(input_path + "15" + ext, 300, 15);
             vector<double> times;
+            vector<long> usages;
             for(int i = 1; i <= 15; i++){
-                usages.push_back(0);
-                times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext, usages));
+                usage = 0;
+                times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext, usage));
+                usages.push_back(usage);
             }
             
             ofstream time_file("./test_units/CPU_TIMES.txt");
             time_file << "Certifier Tests" << endl;
             for(int i = 1; i <= 5; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
-                time_file << "Test " << i << " Peak Memory Usage: " << usages[i] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
             }
             time_file << endl << "Algorithm Tests" << endl;
             for(int i = 6; i <= 15; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
-                time_file << "Test " << i << " Peak Memory Usage: " << usages[i] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
             }
             time_file.close();
             cout << "Finished Running Test Cases, check ./test_units for output" << endl;
@@ -320,14 +320,14 @@ double run(string input_name, string output_name, vector<long>& usages){
             }
         }
         const auto start{std::chrono::steady_clock::now()};
-        T[0] = C(cnf, T, usages);
+        T[0] = C(cnf, T, usage);
         const auto finish{std::chrono::steady_clock::now()};
         const std::chrono::duration<double> elapsed_seconds{finish - start};
         time = elapsed_seconds.count();
     }
     else{
         const auto start{std::chrono::steady_clock::now()};
-        T = SAT_algorithm(cnf, n, usages);
+        T = SAT_algorithm(cnf, n, usage);
         const auto finish{std::chrono::steady_clock::now()};
         const std::chrono::duration<double> elapsed_seconds{finish - start};
         time = elapsed_seconds.count();
@@ -358,10 +358,14 @@ double run(string input_name, string output_name, vector<long>& usages){
         output_file << "X" << T.size()-1 << " = " << T[T.size()-1] << "]" << endl;
         if(!T[0]){
             output_file << "Input Truth Alignments are not a Valid Solution to the Given CNF" << endl;
+            output_file << "CPU Time: " << time << endl;
+            output_file << "Peak Memory Usage: " << usage << endl;
             output_file.close();
             return time;
         }
         output_file << "Input Truth Alignments are a Valid Solution to the Given CNF" << endl;
+        output_file << "CPU Time: " << time << endl;
+        output_file << "Peak Memory Usage: " << usage << endl;
         output_file.close();
         return time;
     }
@@ -369,6 +373,8 @@ double run(string input_name, string output_name, vector<long>& usages){
     output_file << "n = " << n << endl;
     if(!T[0]){
         output_file << "No Solution is possible for the Given CNF" << endl;
+        output_file << "CPU Time: " << time << endl;
+        output_file << "Peak Memory Usage: " << usage << endl;
         output_file.close();
         return time;
     }
@@ -389,6 +395,8 @@ double run(string input_name, string output_name, vector<long>& usages){
         }
     }
     output_file << "X" << T.size()-1 << " = " << T[T.size()-1] << "]" << endl;
+    output_file << "CPU Time: " << time << endl;
+    output_file << "Peak Memory Usage: " << usage << endl;
     output_file.close();
     return time;
 }
@@ -420,8 +428,7 @@ int main(){
     }
     */
     //Default Run Using input.txt & output.txt
-    vector<long> temp;
-    temp.push_back(0);
+    long temp = 0;
     run("./input.txt", "./output.txt", temp);
     return 1;
 }
