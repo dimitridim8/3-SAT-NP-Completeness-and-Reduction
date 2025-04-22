@@ -47,11 +47,10 @@ bool C(vector<vector<int>> cnf, vector<bool> T, vector<long>& usages){
         bool l3_true = (T[abs(l3)] && l3 > 0) || (!T[abs(l3)] && l3 < 0);
 
         //Determine Peak Memory Usage
-        long initial = usages[0];
         long current = get_memory_usage();
-        if(current - initial > usages.back()){
+        if(current > usages.back()){
             usages.pop_back();
-            usages.push_back(current- initial);
+            usages.push_back(current);
         }
         
         //If Clause is not True, Return False
@@ -77,7 +76,7 @@ void T_helper(vector<bool>& T, int index){
 }
 
 //Create Algorithm for 3-SAT
-vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long> usages){
+vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long>& usages){
     
     //Check if Valid Input
     if(cnf.size() <= 0 || n < 3){
@@ -104,11 +103,10 @@ vector<bool> SAT_algorithm(vector<vector<int>> cnf, int n, vector<long> usages){
             T_helper(T, n);
             
             //Determine Peak Memory Usage
-            long initial = usages[0];
             long current = get_memory_usage();
-            if(current - initial > usages.back()){
+            if(current > usages.back()){
                 usages.pop_back();
-                usages.push_back(current- initial);
+                usages.push_back(current);
             }
         }
     }
@@ -230,7 +228,6 @@ double run(string input_name, string output_name, vector<long>& usages){
             generate_worst_case(input_path + "15" + ext, 300, 15);
             vector<double> times;
             for(int i = 1; i <= 15; i++){
-                usages[0] = get_memory_usage();
                 usages.push_back(0);
                 times.push_back(run(input_path + to_string(i) + ext, output_path + to_string(i) + ext, usages));
             }
@@ -239,12 +236,12 @@ double run(string input_name, string output_name, vector<long>& usages){
             time_file << "Certifier Tests" << endl;
             for(int i = 1; i <= 5; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
-                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i] << endl;
             }
             time_file << endl << "Algorithm Tests" << endl;
             for(int i = 6; i <= 15; i++){
                 time_file << "Test " << i << " CPU Time: " << times[i-1] << endl;
-                time_file << "Test " << i << " Peak Memory Usage: " << usages[i-1] << endl;
+                time_file << "Test " << i << " Peak Memory Usage: " << usages[i] << endl;
             }
             time_file.close();
             cout << "Finished Running Test Cases, check ./test_units for output" << endl;
@@ -424,7 +421,7 @@ int main(){
     */
     //Default Run Using input.txt & output.txt
     vector<long> temp;
-    temp.push_back(get_memory_usage());
+    temp.push_back(0);
     run("./input.txt", "./output.txt", temp);
     return 1;
 }
